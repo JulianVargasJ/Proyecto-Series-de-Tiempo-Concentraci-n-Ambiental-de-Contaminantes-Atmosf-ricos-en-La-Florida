@@ -11,7 +11,7 @@ library(lmtest)
 library(moments)
 library(psych)
 
-install.packages("psych")
+# install.packages("moments")
 ##############################################################################
 ## SEGMENTO 1: Lectura, Agregación Mensual e Imputación en Escala Log       ##
 ## - Clase 04: Atributos ts() y agregación temporal con aggregate()         ##
@@ -22,15 +22,15 @@ install.packages("psych")
 ## 1.1 Lectura de datos y formato de calendario (Clase 26)
 
 
-MP25 <- read.csv2(
+# MP25 <- read.csv2(
   "/Users/pilar/Proyecto-Series-de-Tiempo-Concentraci-n-Ambiental-de-Contaminantes-Atmosf-ricos-en-La-Florida/datos_020101_260823.csv",
-  fileEncoding = "Latin1")[, c(1, 3, 4, 5)]
+#  fileEncoding = "Latin1")[, c(1, 3, 4, 5)]
+
+# MP25 <- read.csv2("C:/Users/conjv/Downloads/datos_020101_260823.csv",
+#                  dec = ",", encoding = "latin1")[, c(1, 3, 4, 5)]
 
 
-MP25 <- read.csv2("C:/Users/conjv/Downloads/datos_020101_260823.csv",
-                  dec = ",", encoding = "latin1")[, c(1, 3, 4, 5)]
-
-
+MP25 <- read.csv2( file.choose(), dec = ",",fileEncoding = "Latin1" )[, c(1, 3, 4, 5)]
 
 colnames(MP25) <- c("fecha_num", "validados", "preliminares", "no_validados")
 psych::headTail(MP25)

@@ -26,9 +26,54 @@ A los registros diarios de MP2,5 se le agregaron promedios mensuales utilizando 
     \label{fig:placeholder}
 \end{figure}
 
+
 \section*{Análisis Exploratorio}
 
+Al observar la serie mensual de MP2,5, se ve un patrón estacional bastante marcado, con aumentos recurrentes de contaminación durante ciertos meses del año y disminuciones posteriores. 
+Además, aunque existen cambios importantes en los niveles de contaminación, no se observa una tendencia creciente durante todo el período.
+
+Para estudiar esta estacionalidad, se analizaron la ACF, PACF y el periodograma de la serie en escala logarítmica. En la ACF se observan autocorrelaciones elevadas en los rezagos 12, 24 y 36, 
+lo que indica que el comportamiento se repite aproximadamente cada año. Por su parte, la PACF presenta valores significativos en los primeros rezagos y alrededor del rezago 12.
+
+Finalmente, el periodograma muestra un máximo cercano a $\omega=0.52$, correspondiente a un período aproximado de $2\pi/0.52 \approx 12$ meses. Por lo tanto, los resultados confirman la presencia 
+de una estacionalidad anual, lo que justifica considerar modelos SARIMA para representar el comportamiento de la serie.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.92\linewidth]{fig_02.png}
+    \caption{ACF, PACF y periodograma de la serie
+    logarítmica de MP2,5.}
+    \label{fig:exploratorio}
+\end{figure}
+
+
+
 \section*{Transformación y Estacionalidad}
+
+Primero, se comparó el coeficiente de variación (CV) de la serie original con las transformaciones Box-Cox ($\lambda=0.20$) y logarítmica ($\lambda=0$). Se observa que la escala original presenta una mayor variación,
+mientras que ambas transformaciones permiten reducirla. Sin embargo, la transformación logarítmica presenta los menores valores de CV, por lo que se decidió trabajar con $\log(X_t)$ para estabilizar la varianza.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{fig_03.png}
+    \caption{Comparación del CV anual en las tres escalas.}
+    \label{fig:transformacion}
+\end{figure}
+
+Luego, para estudiar la estacionariedad, se utilizó la función \texttt{nsdiffs}, que indicó la necesidad de aplicar una diferencia estacional ($D=1$) con período 12. Por lo tanto, se trabajó con $Y_t=(1-B^{12})\log(X_t)$.
+Después de aplicar esta diferencia, las pruebas \texttt{ndiffs} con ADF, KPSS y PP indicaron que no era necesaria una diferencia regular ($d=0$). Además, la prueba ADF entregó un estadístico de aproximadamente $-5.63$ y un valor-p menor a $0.01$, 
+lo que permite rechazar la hipótesis de raíz unitaria.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{fig_04.png}
+    \caption{Serie, ACF y periodograma después de aplicar la diferencia estacional.}
+    \label{fig:diferenciacion}
+\end{figure}
+
+Por lo tanto, se decidió trabajar con una diferencia estacional y sin diferenciación regular, es decir, con $d=0$ y $D=1$, para ajustar los modelos SARIMA.
+
+
 
 \section*{Modelo Preliminar y Diagnósticos}
 
@@ -43,7 +88,8 @@ A los registros diarios de MP2,5 se le agregaron promedios mensuales utilizando 
 
     
 
-    \vfill
+
+\vfill
 
 \begin{flushright}
     \textit{Gracias :)}
