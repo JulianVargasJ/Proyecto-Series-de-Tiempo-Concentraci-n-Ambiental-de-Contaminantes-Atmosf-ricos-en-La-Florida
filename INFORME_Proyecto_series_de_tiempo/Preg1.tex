@@ -1,0 +1,54 @@
+\documentclass[letter]{article}
+
+\usepackage{MD_estilo}
+
+\nombre{Luna Garcés, Tomás Pérez, Pilar Vallotton y Julián Vargas.} 
+
+\sigla{EYP290I-1} 
+\curso{Series de Tiempo} 
+
+\begin{document}
+	
+	\begin{pregunta}{1} 
+
+En el presente informe se analiza la concentración de material particulado fino (MP2,5, en $\mu g _/ m^3$) medida por la estación La Florida del Sistema de Información Nacional de Calidad del Aire (SINCA, Ministerio del Medio Ambiente).La base original contiene registros diarios desde enero de 2002 hasta agosto de 2026. Para el análisis se agregaron los registros validados en promedios mensuales, obteniendo una serie de 296 observaciones. El objetivo es determinar si existen tendencia y estacionalidad en la serie, es decir, si el nivel de contaminación cambia con los años y si se repite un patrón anual, y evaluar qué tan bien pueden predecirse sus valores futuros mediante modelos de series de tiempo.
+ 
+
+\section*{Datos y limpieza}
+
+A los registros diarios de MP2,5 se le agregaron promedios mensuales utilizando únicamente los valores \textbf{validados} por el SINCA, ignorando los días sin dato, se excluyeron los registros preliminares y no validados. Por lo que de los 9.000 días disponibles, 8.304 (92,3\,\%) son los que corresponden a datos validados, lo que nos da una serie mensual de 296 observaciones entre enero de 2002 y agosto de 2026, cabe mencionar que agosto se encunetra incompleto, con un total de 22 días. Dentro de la base, Catorce meses carecen de registros validados (enero a septiembre de 2013 y enero a mayo de 2017) y  se imputaron mediante el suavizador de Kalman, que estima cada mes faltante a partir de un modelo SARIMA ajustado a la serie, usando las observaciones anteriores y posteriores, en este caso fue ajustado sobre el logaritmo de la serie con un modelo SARIMA$(1,0,0)(0,1,1)_{12}$. Se trabajó en escala logarítmica para que los valores imputados sean positivos al volver a la escala original. La Figura 1  muestra la serie con los meses imputados.
+
+ (QUIZÁ POR TEMAS DE ESPACIO QUITAR LA FOTO) 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{fig_01.png}
+    \caption{Serie mensual de MP2,5 en La Florida (2002--2026) e imputación de los meses sin datos validados.}
+    \label{fig:placeholder}
+\end{figure}
+
+\section*{Análisis Exploratorio}
+
+\section*{Transformación y Estacionalidad}
+
+\section*{Modelo Preliminar y Diagnósticos}
+
+\section*{Próximos pasos}
+
+
+
+
+
+
+
+
+    
+
+    \vfill
+
+\begin{flushright}
+    \textit{Gracias :)}
+\end{flushright}
+
+	\end{pregunta}
+
+\end{document}
