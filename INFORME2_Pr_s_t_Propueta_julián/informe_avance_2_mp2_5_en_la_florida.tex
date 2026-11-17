@@ -77,7 +77,7 @@ Con el fin de evaluar la capacidad predictiva fuera de muestra sin filtrar infor
 
 \section*{2. Análisis Exploratorio, Transformación y Estacionariedad}
 
-Al observar la evolución histórica de la serie mensual de $\text{MP}_{2,5}$, se distingue un comportamiento estacional pronunciado, con alzas recurrentes de contaminación en otoño e invierno ($45\text{--}62\ \mu\text{g/m}^3$) asociadas a mayores emisiones por calefacción y episodios de mala ventilación en la cuenca de Santiago, seguidas de caídas estivales ($10\text{--}18\ \mu\text{g/m}^3$), además de una disminución paulatina en los valles de verano a lo largo de las dos décadas. En la Figura 2, la ACF de $\log(X_t)$ exhibe una oscilación sinusoidal persistente con picos significativos en múltiplos anuales ($12, 24, 36$ y $48$), mientras que la PACF muestra correlaciones parciales activas en los primeros rezagos y en torno al rezago 12. Tanto el periodograma crudo como su estimación consistente suavizada con splines (\texttt{smooth.periodogram}, $\text{spar} = 0,5$) concentran la energía espectral en la frecuencia $\omega = 0,5197\text{ rad}$ ($j = 22$ en la grilla $2\pi j/266$), equivalente a un período exacto de $2\pi/0,5197 = 12,09 \approx 12$ meses.
+Al observar la evolución histórica de la serie mensual de $\text{MP}_{2,5}$, se distingue un comportamiento estacional pronunciado, con alzas recurrentes de contaminación en otoño e invierno ($45\text{--}62\ \mu\text{g/m}^3$) asociadas a mayores emisiones por calefacción y episodios de mala ventilación en la cuenca de Santiago, seguidas de caídas en verano ($10\text{--}18\ \mu\text{g/m}^3$), además de una disminución paulatina en los valles de verano a lo largo de las dos décadas. En la Figura 2, la ACF de $\log(X_t)$ exhibe una oscilación sinusoidal persistente con picos significativos en múltiplos anuales ($12, 24, 36$ y $48$), mientras que la PACF muestra correlaciones parciales activas en los primeros rezagos y en torno al rezago 12. Tanto el periodograma crudo como su estimación consistente suavizada con splines (\texttt{smooth.periodogram}, $\text{spar} = 0,5$) concentran la energía espectral en la frecuencia $\omega = 0,5197\text{ rad}$ ($j = 22$ en la grilla $2\pi j/266$), equivalente a un período exacto de $2\pi/0,5197 = 12,09 \approx 12$ meses.
 
 \begin{figure}[H]
     \centering
@@ -212,7 +212,7 @@ Pronóstico a 1 paso ($h=1$, filtro Kalman) & $4,79$ & $3,37$ & $13,61$ & & Cobe
 \end{figure}
 \vspace{-0.3cm}
 \begin{flushright}
-    \scriptsize \textit{Fin del Informe de Avance 2}
+    \scriptsize \textit{Uso de IA: se utilizó inteligencia artificial para mejorar la redacción y estética del informe}
 \end{flushright}
 
 \end{document}
