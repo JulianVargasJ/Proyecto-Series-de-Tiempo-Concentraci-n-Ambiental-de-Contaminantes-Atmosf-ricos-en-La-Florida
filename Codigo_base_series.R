@@ -19,17 +19,7 @@ library(psych)
 ##############################################################################
 
 ## 1.1 Lectura de datos y formato de calendario (Clase 26)
-
-
-# MP25 <- read.csv2(
-#  "/Users/pilar/Proyecto-Series-de-Tiempo-Concentraci-n-Ambiental-de-Contaminantes-Atmosf-ricos-en-La-Florida/datos_020101_260823.csv",
-#  fileEncoding = "Latin1")[, c(1, 3, 4, 5)]
-
-# MP25 <- read.csv2("C:/Users/conjv/Downloads/datos_020101_260823.csv",
-#                  dec = ",", encoding = "latin1")[, c(1, 3, 4, 5)]
-
-
-MP25 <- read.csv2( file.choose(), dec = ",",fileEncoding = "Latin1" )[, c(1, 3, 4, 5)]
+MP25 <- read.csv2(file.choose(), dec = ",", fileEncoding = "Latin1")[, c(1, 3, 4, 5)]
 
 colnames(MP25) <- c("fecha_num", "validados", "preliminares", "no_validados")
 psych::headTail(MP25)
@@ -58,19 +48,19 @@ X.bruto <- ts(M.bruto$sensor_bruto, start = c(2002, 1), frequency = 12)
 sum(is.na(X.na))           ## 14 meses faltantes (ene-sep 2013 y ene-may 2017)
 time(X.na)[is.na(X.na)]
 
-## 1.3 Separación Entrenamiento / Validación (20 % más reciente = validación)
-## Se hace antes de imputar porque el suavizador de Kalman usa pasado y futuro, lo que filtraria
+## 1.3 Separación Entrenamiento / Validación (10 % más reciente = validación)
+## Se hace antes de imputar porque el suavizador de Kalman usa pasado y futuro, lo que filtraría
 
-n_total <- length(X.na)
-n_val   <- round(0.20 * n_total) ## 59 meses (~20%: oct-2021 a ago-2026)
-n_train <- n_total - n_val ## 237 meses (~80%: ene-2002 a sep-2021)
+n_total <- length(X.na)           ## 296 meses totales (ene-2002 a ago-2026)
+n_val   <- round(0.10 * n_total)  ## 30 meses (~10%: mar-2024 a ago-2026)
+n_train <- n_total - n_val        ## 266 meses (~90%: ene-2002 a feb-2024)
 
 X.na_train <- ts(X.na[1:n_train], start = start(X.na), frequency = 12)
 X_val      <- ts(X.na[(n_train + 1):n_total],
                  start = time(X.na)[n_train + 1], frequency = 12)
 
 c(n_total = n_total, n_train = n_train, n_val = n_val)
-c(fin_train = time(X.na_train)[n_train], ini_val = time(X_val)[1])
+c(fin_train = time(X.na_train)[n_train], ini_val = time(X_val)[1]) ## 2024.083 y 2024.167
 sum(is.na(X_val))   ## debe ser 0: los faltantes están todos en el entrenamiento
 
 ## 1.4 Imputación con Suavizador de Kalman en escala log (Clase 20, Paso 1 y 3)
@@ -84,7 +74,7 @@ fit.na  <- stats::arima(W.na, order = c(1, 0, 0),
 ks      <- stats::KalmanSmooth(W.na, fit.na$model)
 imp.log <- drop(ks$smooth %*% fit.na$model$Z) + media.log
 
-## X_train es la serie de entrenamiento limpia que se usara el resto del analisis
+## X_train es la serie de entrenamiento limpia que se usará el resto del análisis
 X_train <- X.na_train
 idx.na  <- which(is.na(X.na_train))
 X_train[idx.na] <- exp(imp.log[idx.na])
@@ -94,8 +84,8 @@ par(bty = "n", las = 1, mfrow = c(1, 1))
 plot(ts.union(X_train, X_val), plot.type = "single", col = c("gray40", "darkgreen"),
      lwd = 1.5, xlab = "Año", ylab = expression(mu*g/m^3),
      main = "MP2,5 mensual en La Florida (2002-2026): entrenamiento y validación")
-points(time(X_train)[idx.na], X.bruto[idx.na],  pch = 1,  col = "blue", cex = 1.3)
-points(time(X_train)[idx.na], X_train[idx.na],  pch = 19, col = "red",  cex = 1.0)
+points(time(X_train)[idx.na], X.bruto[idx.na], pch = 1,  col = "blue", cex = 1.3)
+points(time(X_train)[idx.na], X_train[idx.na], pch = 19, col = "red",  cex = 1.0)
 abline(v = time(X_val)[1], lty = 2)
 legend("topright",
        legend = c("Entrenamiento (X_train)", "Validación (X_val)",
@@ -110,17 +100,16 @@ legend("topright",
 ## - Clase 13 (Paso 3 y 5): Periodograma crudo y suavizado con splines      ##
 ##############################################################################
 
-## 2.1 Evaluación de heterocedasticidad: Guerrero (~0.49) vs LogLik (0.20) vs Log (0)
+## 2.1 Evaluación de heterocedasticidad: Guerrero (~0.55) vs LogLik (0.20) vs Log (0)
 lambda_guerrero <- forecast::BoxCox.lambda(X_train, method = "guerrero") ## ~ 0.55 
 lambda_loglik   <- forecast::BoxCox.lambda(X_train, method = "loglik")   ## = 0.20
 c(Guerrero = lambda_guerrero, LogLik = lambda_loglik)
 
-
 cov.fn <- function(x) sd(x)/mean(x)
-X_cv <- window(X_train, end = c(2020, 12))
+X_cv <- window(X_train, end = c(2023, 12)) ## Último año calendario completo en X_train
 X.bc <- forecast::BoxCox(X_cv, lambda = lambda_loglik)
 Y_cv <- log(X_cv)
-Y <- log(X_train) ## Serie de entrenamiento completa (237 meses) para modelar
+Y    <- log(X_train) ## Serie de entrenamiento completa (266 meses) para modelar
 
 par(bty = "n", las = 1, mfrow = c(1, 3))
 plot(aggregate(X_cv ~ trunc(time(X_cv)), FUN = cov.fn), type = "o", pch = 20,
@@ -145,7 +134,7 @@ legend("topright", legend = c("Periodograma", "Spline suavizado", "Armónicos s=
        col = c("gray60", "blue", "red"), lty = c(1, 1, 3), lwd = c(1, 2, 1), bty = "n")
 
 freq_peak <- P0$lambda[which.max(P0$periodogram)]
-c(Frecuencia = freq_peak, Periodo_meses = 2*pi / freq_peak) ## omega = 0.5302 -> 11.85 meses (grilla 2*pi*j/237, j = 20)
+c(Frecuencia = freq_peak, Periodo_meses = 2*pi / freq_peak) ## omega = 0.5196 -> 12.09 meses (grilla 2*pi*j/266, j = 22)
 
 
 ##############################################################################
@@ -160,7 +149,7 @@ d12.Y <- diff(Y, lag = 12)
 forecast::ndiffs(d12.Y, test = "adf")       ## d = 0
 forecast::ndiffs(d12.Y, test = "kpss")      ## d = 0
 forecast::ndiffs(d12.Y, test = "pp")        ## d = 0
-tseries::adf.test(d12.Y)                    ## ADF = -4.76, p-valor < 0.01 -> estacionaria
+tseries::adf.test(d12.Y)                    ## ADF = -5.42, p-valor < 0.01 -> estacionaria
 
 par(bty = "n", las = 1, mfrow = c(1, 3))
 plot(d12.Y, ylab = "", xlab = "Año", col = "gray40", main = expression((1 - B^12)*log(X[t])))
@@ -221,18 +210,21 @@ tabla.modelos <- rbind(
 print(round(tabla.modelos, 3))
 
 ## 4.3 Diagnóstico de residuos e identificación de valores atípicos
-## Puedes evaluar mod.final <- mod.100 (más parsimonioso en BIC) o mod.ma15 (mejor AICc)
 mod.final <- mod.100
 res       <- c(residuals(mod.final))
 res.std   <- res / sqrt(mod.final$sigma2)
 
-## Detección de outliers en entrenamiento (|Z| > 2.5): identifica feb-2014 y mar-2016
-idx.out <- which(abs(res.std) > 2.5) ## 3
+## Detección de outliers en entrenamiento (|Z| > 2.5): identifica feb-2014, may-2022 y feb-2023
+idx.out <- which(abs(res.std) > 2.5)
 data.frame(Fecha = sprintf("%d-%02d", M.val$year[idx.out], M.val$month[idx.out]),
            MP25_ugm3 = round(X_train[idx.out], 2),
            Z_residuo = round(res.std[idx.out], 2))
 
-## (a) Causalidad e invertibilidad (Clase 09 y 26)
+## Removemos los outliers detectados (idx.out) en un vector res.clean para que el
+## QQ-plot y el histograma no se distorsionen por el incendio forestal de feb-2023:
+res.clean <- res[-idx.out]
+
+## (a) Causalidad e invertibilidad (Clase 09 y 26): 1 raíz AR y 12 raíces SMA limpias
 par(bty = "n", las = 1, mfrow = c(1, 1))
 plot(mod.final)
 
@@ -240,27 +232,25 @@ plot(mod.final)
 LSTS::ts.diag(c(residuals(mod.100)),  lag = 24)
 LSTS::ts.diag(c(residuals(mod.ma15)), lag = 24)
 
-## (c) Normalidad, curtosis y receta de detección ARCH en res^2 (Clase 03, 17 y 18)
+## (c) Normalidad (sin los outliers exógenos) y receta de detección ARCH en res^2 (Clase 03, 17 y 18)
 par(bty = "n", las = 1, mfrow = c(2, 2))
-hist(res, breaks = 25, freq = FALSE, col = "gray90", border = "white",
+hist(res.clean, breaks = 25, freq = FALSE, col = "gray90", border = "white",
      main = "Distribución de residuos vs Normal", xlab = "Residuos")
-lines(density(res), lwd = 2)
-curve(dnorm(x, mean = mean(res), sd = sd(res)), add = TRUE, col = "red", lwd = 2)
+lines(density(res.clean), lwd = 2)
+curve(dnorm(x, mean = mean(res.clean), sd = sd(res.clean)), add = TRUE, col = "red", lwd = 2)
 
-qqnorm(res, pch = 20, col = "gray40", main = "QQ-plot Normal de residuos")
-qqline(res, col = "red", lwd = 2)
+qqnorm(res.clean, pch = 20, col = "gray40", main = "QQ-plot Normal de residuos")
+qqline(res.clean, col = "red", lwd = 2)
 
 acf(res,   lag.max = 24, ylim = c(-0.5, 1), lwd = 2, main = expression("ACF de "*hat(e)[t]))
 acf(res^2, lag.max = 24, ylim = c(-0.5, 1), lwd = 2, main = expression("ACF de "*hat(e)[t]^2*" (Efecto ARCH)"))
 
-cat(sprintf("Asimetría: %.3f (Normal = 0)\n", moments::skewness(res)))
-cat(sprintf("Curtosis:  %.3f (Normal = 3)\n", moments::kurtosis(res)))
-c(p_Shapiro_Normalidad = shapiro.test(res)$p.value,
+cat(sprintf("Asimetría: %.3f (Normal = 0)\n", moments::skewness(res.clean)))
+cat(sprintf("Curtosis:  %.3f (Normal = 3)\n", moments::kurtosis(res.clean)))
+c(p_Shapiro_Normalidad = shapiro.test(res.clean)$p.value,
   p_BoxLjung_res_24    = Box.test(res,   lag = 24, type = "Ljung")$p.value,
   p_BoxLjung_ARCH_12   = Box.test(res^2, lag = 12, type = "Ljung")$p.value,
   p_BoxLjung_ARCH_24   = Box.test(res^2, lag = 24, type = "Ljung")$p.value)
-
-
 
 
 ##############################################################################
@@ -272,7 +262,7 @@ c(p_Shapiro_Normalidad = shapiro.test(res)$p.value,
 
 ## Variable con la serie completa (entrenamiento limpio + validación) para graficar
 X_completa <- ts(c(X_train, X_val), start = start(X_train), frequency = 12)
-h_val      <- length(X_val) ## 59 meses de validación (oct-2021 a ago-2026)
+h_val      <- length(X_val) ## 30 meses de validación (mar-2024 a ago-2026)
 
 ## 5.1 Pronóstico sobre el conjunto de validación con bandas al 95% (Clases 25 y 26)
 ## Con lambda = 0, forecast() devuelve pronóstico y bandas asimétricas en ug/m3 (Clase 20)
@@ -290,13 +280,13 @@ lines(X_completa, col = "gray30", lwd = 1)
 lines(pre.ma15$fitted, col = "red", lwd = 1)
 abline(v = time(X_val)[1], lty = 2)
 
-## Panel derecho: Zoom al tramo de validación (2020-2026) para verificar captura de X_val
-plot(pre.ma15, xlim = c(2020, 2026.8), ylim = c(5, 65),
-     main = "Zoom Validación (oct-2021 a ago-2026)",
+## Panel derecho: Zoom al tramo de validación (mar-2024 a ago-2026) para verificar captura de X_val
+plot(pre.ma15, xlim = c(2022, 2026.8), ylim = c(5, 65),
+     main = "Zoom Validación (mar-2024 a ago-2026)",
      xlab = "Año", ylab = expression(mu*g/m^3), shadecols = "lightblue")
 lines(X_train, col = "gray40", lwd = 1.2)
 lines(X_val,   col = "darkgreen", lwd = 1.8)
-lines( as.numeric(time(X_val)), as.numeric(pre.ma15$mean), col = "blue", lwd = 1.8)
+lines(as.numeric(time(X_val)), as.numeric(pre.ma15$mean), col = "blue", lwd = 1.8)
 abline(v = time(X_val)[1], lty = 2)
 legend("topleft",
        legend = c("Observado validación (X_val)", "Pronóstico (media)", "Banda IC 95%"),
@@ -308,11 +298,11 @@ par(bty = "n", las = 1, mfrow = c(1, 1))
 plot(X_val, col = "darkgreen", lwd = 2, ylim = c(5, 75),
      xlab = "Año", ylab = expression(mu*g/m^3),
      main = "Bandas de predicción 95% en validación: d = 0 con drift vs d = 1 (sobredif.)")
-lines(pre.ma15$mean,  col = "blue", lwd = 2)
-lines(pre.ma15$lower, col = "blue", lty = 2, lwd = 1.5)
-lines(pre.ma15$upper, col = "blue", lty = 2, lwd = 1.5)
-lines(pre.sobredif$lower, col = "red", lty = 3, lwd = 1.5)
-lines(pre.sobredif$upper, col = "red", lty = 3, lwd = 1.5)
+lines(pre.ma15$mean,      col = "blue", lwd = 2)
+lines(pre.ma15$lower,     col = "blue", lty = 2, lwd = 1.5)
+lines(pre.ma15$upper,     col = "blue", lty = 2, lwd = 1.5)
+lines(pre.sobredif$lower, col = "red",  lty = 3, lwd = 1.5)
+lines(pre.sobredif$upper, col = "red",  lty = 3, lwd = 1.5)
 legend("topleft",
        legend = c("X_val observado", "IC 95% Depurado (d=0 + drift)", "IC 95% Sobredif. (d=1)"),
        col = c("darkgreen", "blue", "red"), lty = c(1, 2, 3), lwd = 2, bty = "n")
@@ -334,9 +324,9 @@ tabla.validacion <- rbind(
   Depurado_MA15    = bt(mod.ma15)
 )
 print(round(tabla.validacion, 2))
-## Cobertura de 94.92% (56 de 59 meses dentro de la banda del 95%): calibración exacta.
+## Cobertura de 96.67% (29 de 30 meses dentro de la banda del 95%): calibración exacta.
 
-## ¿Qué meses de validación se salen de la banda del 95%? (Destaca feb-2023 por incendios)
+## ¿Qué mes de validación se sale de la banda del 95%?
 fuera.banda <- which(X_val < pre.ma15$lower | X_val > pre.ma15$upper)
 data.frame(
   Fecha     = sprintf("%d-%02d", M.val$year[n_train + fuera.banda], M.val$month[n_train + fuera.banda]),
@@ -351,22 +341,22 @@ data.frame(
 ##     (Ref: Clase 21 Paso 4 y Clase 22 Paso 5)                             ##
 ##############################################################################
 
-H <- 12 ## Horizonte de 12 meses (1 ciclo anual completo)
+H        <- 12 ## Horizonte de 12 meses (1 ciclo anual completo)
 origenes <- which(seq_along(X_completa) >= n_train & seq_along(X_completa) < length(X_completa))
 
 pres <- vector("list", length(origenes))
-err <- matrix(NA, length(origenes), H)
-pct <- matrix(NA, length(origenes), H)
-cub <- matrix(NA, length(origenes), H)
+err  <- matrix(NA, length(origenes), H)
+pct  <- matrix(NA, length(origenes), H)
+cub  <- matrix(NA, length(origenes), H)
 
 for (i in seq_along(origenes)) {
-  k <- origenes[i]
-  X.k <- window(X_completa, end = time(X_completa)[k])
+  k     <- origenes[i]
+  X.k   <- window(X_completa, end = time(X_completa)[k])
   ## Evaluamos el modelo preliminar seleccionado sin reestimar (como en Clase 22 Paso 5)
   fit.k <- forecast::Arima(X.k, model = mod.ma15)
   pres[[i]] <- forecast::forecast(fit.k, h = H, level = 95)
   
-  m <- min(H, length(X_completa) - k)
+  m   <- min(H, length(X_completa) - k)
   obs <- X_completa[(k + 1):(k + m)]
   err[i, 1:m] <- obs - pres[[i]]$mean[1:m]
   pct[i, 1:m] <- 100 * err[i, 1:m] / obs
@@ -376,7 +366,7 @@ for (i in seq_along(origenes)) {
 ## Función para graficar cada cuadro del avance temporal (Clase 22, Paso 5)
 cuadro <- function(i) {
   k <- origenes[i]
-  plot(pres[[i]], xlim = c(2019, 2026.8), ylim = c(5, 65),
+  plot(pres[[i]], xlim = c(2021, 2026.8), ylim = c(5, 65),
        main = sprintf("Back-test móvil — Origen: %d-%02d",
                       floor(time(X_completa)[k] + 1e-6), cycle(X_completa)[k]),
        bty = "n", las = 1, font.main = 1, xlab = "Año", ylab = expression(mu*g/m^3))
@@ -391,7 +381,7 @@ for (i in seq_along(origenes)) {
   Sys.sleep(0.10)
 }
 
-## Resumen del Back-test por horizonte h = 1...12 (Clase 22, Paso 5)
+## Resumen del Back-test por horizonte h = 1..12 (Clase 22, Paso 5)
 res.bt <- data.frame(
   h         = 1:H,
   RMSE      = sqrt(colMeans(err^2, na.rm = TRUE)),
@@ -409,3 +399,40 @@ plot(res.bt$h, res.bt$cobertura, type = "b", pch = 20, col = "darkgreen", ylim =
      xlab = "Horizonte h (meses)", ylab = "Cobertura banda 95%", main = "Calibración del IC 95%")
 abline(h = 0.95, col = "red", lty = 2)
 par(mfrow = c(1, 1))
+
+##############################################################################
+## 5.3 Corrección por sesgo log-normal (biasadj = TRUE, Formulario pág. iii)##
+##     y comparación con pronóstico a 1 paso (h = 1) en validación          ##
+##############################################################################
+
+pre.ma15.media <- forecast::forecast(mod.ma15, h = h_val, level = 95, biasadj = TRUE)
+fit.val.1paso  <- forecast::Arima(X_completa, model = mod.ma15)
+pred.1paso     <- window(fit.val.1paso$fitted, start = start(X_val))
+
+metricas <- function(pred) {
+  c(RMSE = sqrt(mean((X_val - pred)^2)),
+    MAE  = mean(abs(X_val - pred)),
+    MAPE = 100 * mean(abs(X_val - pred) / X_val))
+}
+round(rbind(
+  Proyeccion_30m_Mediana = metricas(pre.ma15$mean),
+  Proyeccion_30m_Media   = metricas(pre.ma15.media$mean),
+  Un_Paso_h1_Kalman      = metricas(pred.1paso)
+), 2)
+
+par(bty = "n", las = 1, mfrow = c(1, 1))
+plot(pre.ma15.media, xlim = c(2022, 2026.8), ylim = c(5, 60),
+     main = "Validación (mar-2024 a ago-2026): Proyección a 30 meses vs Pronóstico a 1 paso (h = 1)",
+     xlab = "Año", ylab = expression(mu*g/m^3), shadecols = "lightblue")
+lines(X_val, col = "darkgreen", lwd = 2)
+lines(pre.ma15.media$mean, col = "blue", lwd = 2)
+lines(pred.1paso, col = "darkorange", lwd = 1.8, lty = 2)
+abline(v = time(X_val)[1], lty = 2)
+legend("topleft",
+       legend = c("Observado (X_val)",
+                  "Proyección h=1..30 (Media, biasadj=TRUE)",
+                  "Pronóstico a 1 paso (h=1, reacción AR1)",
+                  "Banda IC 95%"),
+       col = c("darkgreen", "blue", "darkorange", "lightblue"),
+       lty = c(1, 1, 2, 1), lwd = c(2, 2, 1.8, 8), bty = "n")
+
